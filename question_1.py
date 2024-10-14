@@ -1,22 +1,25 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import filedialog, messagebox
+from PIL import Image, ImageTk
+import tensorflow as tf
+import numpy as np
 
 # Base class for the application
 class AppBase:
     def __init__(self, master):
         self.master = master
-        self.master.title("AI Application")
+        self.master.title("AI Image Classifier")
 
 # Derived class for a specific AI feature
 class ImageClassifier(AppBase):
     def __init__(self, master):
         super().__init__(master)  # Using inheritance
-        self.model = self.load_model()  # Encapsulation of model loading
+        self.model = self.load_model()  # Load the AI model
         self.create_widgets()  # UI elements
 
     def load_model(self):
-        # Load your AI model here
-        return "Loaded AI Model"
+        # Load pre-trained MobileNetV2 model with ImageNet weights
+        return tf.keras.applications.MobileNetV2(weights="imagenet")
 
     def create_widgets(self):
         # Create UI components like buttons and labels
@@ -25,9 +28,56 @@ class ImageClassifier(AppBase):
         self.upload_button = tk.Button(self.master, text="Upload", command=self.upload_image)
         self.upload_button.pack()
 
+        # Label to display the image
+        self.image_label = tk.Label(self.master)
+        self.image_label.pack()
+
     def upload_image(self):
-        # Logic to upload an image and get prediction
-        messagebox.showinfo("Info", "Image uploaded and processed!")
+        # Open a file dialog to upload an image
+        file_path = filedialog.askopenfilename(
+            title="Select an Image", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")]
+        )
+
+        if file_path:
+            # Load and display the image using Pillow
+            image = Image.open(file_path)
+            image = image.resize((250, 250))  # Resize the image for display purposes
+            img = ImageTk.PhotoImage(image)
+
+            # Update the label with the image
+            self.image_label.config(image=img)
+            self.image_label.image = img  # Keep a reference to avoid garbage collection
+
+            # Process and classify the image
+            self.classify_image(file_path)
+        else:
+            messagebox.showerror("Error", "No file selected.")
+
+    def preprocess_image(self, file_path):
+        # Load the image and resize it to the input size of the model (224x224 for MobileNetV2)
+        image = Image.open(file_path)
+        image = image.resize((224, 224))
+        image = np.array(image)  # Convert to numpy array
+        image = tf.keras.applications.mobilenet_v2.preprocess_input(image)  # Preprocess for the model
+        image = np.expand_dims(image, axis=0)  # Add batch dimension
+        return image
+
+    def classify_image(self, file_path):
+        # Preprocess the image
+        processed_image = self.preprocess_image(file_path)
+
+        # Get predictions
+        predictions = self.model.predict(processed_image)
+
+        # Decode the prediction using ImageNet labels
+        decoded_predictions = tf.keras.applications.mobilenet_v2.decode_predictions(predictions, top=1)[0]
+
+        # Get the highest probable class and display it
+        class_name = decoded_predictions[0][1]  # Class name
+        confidence = decoded_predictions[0][2]  # Confidence score
+
+        # Show the classification result
+        messagebox.showinfo("Classification Result", f"Predicted: {class_name}\nConfidence: {confidence:.2f}")
 
 # Main application loop
 if __name__ == "__main__":
