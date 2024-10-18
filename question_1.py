@@ -14,10 +14,10 @@ class AppBase:
 class ImageClassifier(AppBase):
     def __init__(self, master):
         super().__init__(master)  # Using inheritance
-        self.model = self.load_model()  # Load the AI model
+        self.model = self.load_model_image()  # Load the AI model
         self.create_widgets()  # UI elements
 
-    def load_model(self):
+    def load_model_image(self):
         # Load pre-trained MobileNetV2 model with ImageNet weights
         return tf.keras.applications.MobileNetV2(weights="imagenet")
 
@@ -31,27 +31,27 @@ class ImageClassifier(AppBase):
         # Label to display the image
         self.image_label = tk.Label(self.master)
         self.image_label.pack()
-
+    
     def upload_image(self):
-        # Open a file dialog to upload an image
+        # Open a file dialog to select an image file
         file_path = filedialog.askopenfilename(
-            title="Select an Image", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")]
+            title="Choose an Image", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")]
         )
 
         if file_path:
-            # Load and display the image using Pillow
+            # Load the image using Pillow and resize it for display
             image = Image.open(file_path)
-            image = image.resize((250, 250))  # Resize the image for display purposes
+            image = image.resize((250, 250))
             img = ImageTk.PhotoImage(image)
 
-            # Update the label with the image
+            # Display the image on the label
             self.image_label.config(image=img)
-            self.image_label.image = img  # Keep a reference to avoid garbage collection
+            self.image_label.image = img  # Prevent the image from being garbage collected
 
-            # Process and classify the image
+            # Analyze and classify the uploaded image
             self.classify_image(file_path)
         else:
-            messagebox.showerror("Error", "No file selected.")
+            messagebox.showerror("Error", "No image was selected.")
 
     def preprocess_image(self, file_path):
         # Load the image and resize it to the input size of the model (224x224 for MobileNetV2)
